@@ -2,58 +2,57 @@ import os
 from collections import defaultdict
 from api_calling import api_access
 
-# API 配置
+# API configuration
 API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 api = api_access(key=API_KEY) if API_KEY else None
 
-# 内存存储聊天历史
+# In-memory chat history storage
 chat_history_store = defaultdict(list)
 
 
 def chat_completion(message, user_id='default', slide_id=None, selected_cards=None):
-    """处理用户消息并返回 AI 响应
+    """Process user message and return AI response
 
     Args:
-        message: 用户消息
-        user_id: 用户 ID
-        slide_id: 当前 slide ID
-        selected_cards: 选中的概念卡片列表
+        message: User message
+        user_id: User ID
+        slide_id: Current slide ID
+        selected_cards: Selected concept cards
 
     Returns:
-        dict: AI 响应结果
+        dict: AI response result
     """
-    # 记录用户消息
+    # Record user message
     chat_history_store[user_id].append({
         'role': 'user',
         'content': message
     })
 
-    # 构建提示词
+    # Build context
     prompt_parts = []
 
     if slide_id:
-        prompt_parts.append(f"当前分析的幻灯片 ID: {slide_id}")
+        prompt_parts.append(f"Current slide ID: {slide_id}")
 
     if selected_cards:
-        prompt_parts.append(f"用户选中了 {len(selected_cards)} 个概念")
+        prompt_parts.append(f"User selected {len(selected_cards)} concepts")
 
     context = '\n'.join(prompt_parts) if prompt_parts else ''
 
-    # 调用模型
+    # Call model
     if api:
         try:
-            # 使用 chat 方法进行对话
-            history = chat_history_store[user_id][-10:]  # 最近 10 条
+            history = chat_history_store[user_id][-10:]  # Last 10 messages
             text_list = [[m['role'], m['content']] for m in history]
 
             ai_response = api.read_text(text_list)
         except Exception as e:
-            ai_response = f"抱歉，发生了错误: {str(e)}"
+            ai_response = f"An error occurred: {str(e)}"
     else:
-        # Demo 模式
+        # Demo mode
         ai_response = generate_demo_response(message, selected_cards)
 
-    # 记录 AI 响应
+    # Record AI response
     chat_history_store[user_id].append({
         'role': 'assistant',
         'content': ai_response
@@ -62,29 +61,29 @@ def chat_completion(message, user_id='default', slide_id=None, selected_cards=No
     return {
         'response': ai_response,
         'suggestions': [
-            {'type': 'concept', 'title': '提取关键概念'},
-            {'type': 'action', 'title': '采纳建议'}
+            {'type': 'concept', 'title': 'Extract key concepts'},
+            {'type': 'action', 'title': 'Apply suggestion'}
         ],
         'historyLength': len(chat_history_store[user_id])
     }
 
 
 def generate_demo_response(message, selected_cards):
-    """生成演示响应（当没有配置 API 时）"""
+    """Generate demo response when API is not configured"""
     if not message.strip():
-        return '请输入您的问题'
+        return 'Please enter your question'
 
     if selected_cards and len(selected_cards) > 0:
-        return f'我注意到您选中了 {len(selected_cards)} 个概念。请问您想了解它们之间的关联吗？'
+        return f'I notice you selected {len(selected_cards)} concepts. Would you like to know how they are related?'
 
-    return f'您的问题是: {message}\n\n这是一条模拟响应。请配置 ANTHROPIC_API_KEY 来启用真实的 AI 响应。'
+    return f'Your question is: {message}\n\nThis is a simulated response. Please configure ANTHROPIC_API_KEY to enable real AI responses.'
 
 
 def get_history(user_id='default'):
-    """获取聊天历史"""
+    """Get chat history"""
     return chat_history_store[user_id]
 
 
 def clear_history(user_id='default'):
-    """清除聊天历史"""
+    """Clear chat history"""
     chat_history_store[user_id] = []

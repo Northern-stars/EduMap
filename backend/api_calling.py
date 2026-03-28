@@ -1,21 +1,22 @@
-from anthropic import Anthropic
 import io
+import base64
+import requests
 from PIL import Image
 from spire.presentation import Presentation
 
 
-KEY = ""
+KEY = "sk-cp-kybfKR17owcghdMDQp_rmpRfKdUXRs0Y0KP9W6zstrpQLjoeScvTqrpr_e78Sr2X9mMlS_fxp3CMCKkl1qKEtl5P3fl7fYdSaX1iykCTgYGunkhoTE5yerw"
+BASE_URL = "https://api.minimax.chat/v1"
 
 
 def pptx_to_images(pptx_path, dpi=300):
-    """将 PPTX 文件按页转换为图片列表（使用 Spire.Presentation）
+    """Convert PPTX file to image list by page (using Spire.Presentation)
 
     Args:
-        pptx_path: PPTX 文件路径
-        dpi: 图片清晰度（当前版本不支持自定义 DPI）
-
+        pptx_path: PPTX file path
+        dpi: Image quality (current version does not support custom DPI)
     Returns:
-        List[PIL.Image]: 每页对应的图片列表
+        List[PIL.Image]: Image list for each page
     """
     prs = Presentation()
     prs.LoadFromFile(pptx_path)
@@ -23,7 +24,7 @@ def pptx_to_images(pptx_path, dpi=300):
     images = []
 
     for i, slide in enumerate(prs.Slides):
-        # 保存为图片，返回 Stream
+        # Save as image, returns Stream
         stream = slide.SaveAsImage()
         stream_bytes = stream.ToArray()
         img = Image.open(io.BytesIO(stream_bytes))
@@ -35,63 +36,71 @@ def pptx_to_images(pptx_path, dpi=300):
 
 
 class api_access:
-    def __init__(self, key=KEY, model="claude-sonnet-4-20250514"):
-        self.client = Anthropic(api_key=key)
+    def __init__(self, key=KEY, model="MiniMax-M2"):
+        self.api_key = key
         self.model = model
+        self.base_url = BASE_URL
 
-    def read_file(self, path):
-        with open(path, "rb") as f:
-            file = f.read()
-
-        response = self.client.responses.create(
-            model=self.model,
-            input=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": "Read through this file and conclude it"
-                        },
-                        {
-                            "type": "input_file",
-                            "filename": path,
-                            "file_data": file
-                        }
-                    ]
-                }
-            ]
-        )
-
-        return response
-
-    def read_text(self, text_list):
-        """处理对话列表
+    def _call_minimax(self, messages, max_tokens=4096, temperature=0.7):
+        """Call MiniMax ChatCompletion API
 
         Args:
-            text_list: [[role, content], ...] 格式的列表，role 为 'user' 或 'assistant'
+            messages: List of message dicts with 'role' and 'content'
+            max_tokens: Maximum tokens to generate
+            temperature: Sampling temperature
+
+        Returns:
+            str: Response content
+        """
+        url = f"{self.base_url}/text/chatcompletion_v2"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}"
+        }
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens
+        }
+
+        response = requests.post(url, json=payload, headers=headers, timeout=120)
+        response.raise_for_status()
+
+        data = response.json()
+        return data.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+    def read_file(self, path):
+        """Read and analyze a file"""
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        messages = [
+            {"role": "user", "content": "Read through this file and summarize it:\n\n" + content}
+        ]
+        return self._call_minimax(messages, max_tokens=1000)
+
+    def read_text(self, text_list):
+        """Handle conversation list
+
+        Args:
+            text_list: [[role, content], ...] format, role is 'user' or 'assistant'
         """
         messages = []
         for role, content in text_list:
-            if role == 'user':
-                messages.append({"role": "user", "content": content})
-            elif role == 'assistant':
-                messages.append({"role": "assistant", "content": content})
+            messages.append({"role": role, "content": content})
 
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=4096,
-            messages=messages
-        )
-
-        return response.content[0].text
+        return self._call_minimax(messages, max_tokens=4096)
 
     def chat(self, message, history=None):
-        """简单的对话接口
+        """Simple chat interface
 
         Args:
-            message: 用户消息
-            history: 可选的对话历史 [[role, content], ...]
+            message: User message
+            history: Optional conversation history [[role, content], ...]
+
+        Returns:
+            str: AI response
         """
         messages = []
         if history:
@@ -99,54 +108,48 @@ class api_access:
                 messages.append({"role": role, "content": content})
         messages.append({"role": "user", "content": message})
 
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=4096,
-            messages=messages
-        )
+        return self._call_minimax(messages, max_tokens=1000)
 
-        return response.content[0].text
-
-    def analyze_pptx_images(self, pptx_path, prompt="描述这张幻灯片的内容"):
-        """将 PPTX 转换为图片并输给模型识别
+    def analyze_pptx_images(self, pptx_path, prompt="Describe the content of this slide"):
+        """Convert PPTX to images and send to model for analysis
 
         Args:
-            pptx_path: PPTX 文件路径
-            prompt: 给模型的提示词
+            pptx_path: PPTX file path
+            prompt: Prompt for the model
 
         Returns:
-            模型对每页幻灯片的识别结果列表
+            List of recognition results for each slide
         """
-        # 将 PPTX 转换为图片
+        # Convert PPTX to images
         images = pptx_to_images(pptx_path)
 
         results = []
         for i, img in enumerate(images):
-            # 将 PIL Image 转换为字节
+            # Convert PIL Image to bytes
             buf = io.BytesIO()
             img.save(buf, format='PNG')
-            buf.seek(0)
+            img_bytes = buf.getvalue()
+            buf.close()
 
-            # 发送给模型
-            response = self.client.responses.create(
-                model=self.model,
-                input=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "input_text", "text": f"第 {i+1} 页: {prompt}"},
-                            {"type": "input_image", "source": {"type": "base64", "media_type": "image/png", "data": buf.read().decode('latin-1')}}
-                        ]
-                    }
-                ]
-            )
+            # Encode image to base64
+            img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_base64}"}},
+                        {"type": "text", "text": f"第 {i+1} 页: {prompt}"}
+                    ]
+                }
+            ]
+
+            response = self._call_minimax(messages, max_tokens=2048)
 
             results.append({
                 "page": i + 1,
                 "response": response
             })
-
-            buf.close()
 
         return results
 

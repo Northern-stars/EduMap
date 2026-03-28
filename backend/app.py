@@ -9,7 +9,7 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# 注册蓝图
+# Register blueprints
 from routes.slides import slides_bp
 from routes.chat import chat_bp
 

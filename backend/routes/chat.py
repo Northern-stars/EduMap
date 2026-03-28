@@ -6,10 +6,10 @@ chat_bp = Blueprint('chat', __name__)
 
 @chat_bp.route('', methods=['POST'])
 def chat():
-    """发送消息给 AI"""
+    """Send message to AI"""
     data = request.get_json()
     if not data:
-        return jsonify({'error': '没有请求数据'}), 400
+        return jsonify({'error': 'No request data'}), 400
 
     message = data.get('message', '')
     user_id = data.get('userId', 'default')
@@ -17,7 +17,7 @@ def chat():
     selected_cards = data.get('selectedCards', [])
 
     if not message:
-        return jsonify({'error': '消息为空'}), 400
+        return jsonify({'error': 'Empty message'}), 400
 
     result = chat_completion(
         message=message,
@@ -31,7 +31,7 @@ def chat():
 
 @chat_bp.route('/history', methods=['GET'])
 def get_chat_history():
-    """获取聊天历史"""
+    """Get chat history"""
     user_id = request.args.get('userId', 'default')
     history = get_history(user_id)
     return jsonify(history)
@@ -39,7 +39,7 @@ def get_chat_history():
 
 @chat_bp.route('/history', methods=['DELETE'])
 def delete_chat_history():
-    """清除聊天历史"""
+    """Clear chat history"""
     user_id = request.args.get('userId', 'default')
     clear_history(user_id)
     return jsonify({'status': 'ok'})

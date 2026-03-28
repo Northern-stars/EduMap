@@ -4,21 +4,21 @@ from datetime import datetime
 from api_calling import pptx_to_images
 from api_calling import api_access
 
-# API 配置
+# API configuration
 API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 api = api_access(key=API_KEY) if API_KEY else None
 
 
 def parse_slide_file(file_path, slide_id, filename):
-    """解析幻灯片文件
+    """Parse slide file
 
     Args:
-        file_path: 文件路径
+        file_path: File path
         slide_id: Slide ID
-        filename: 文件名
+        filename: Filename
 
     Returns:
-        dict: 解析结果
+        dict: Parse result
     """
     ext = os.path.splitext(filename)[1].lower()
 
@@ -44,13 +44,13 @@ def parse_slide_file(file_path, slide_id, filename):
         result = parse_docx(file_path, slide_id, filename)
     else:
         result['status'] = 'error'
-        result['error'] = f'不支持的文件格式: {ext}'
+        result['error'] = f'Unsupported file format: {ext}'
 
     return result
 
 
 def parse_pptx(file_path, slide_id, filename):
-    """解析 PPTX 文件"""
+    """Parse PPTX file"""
     result = {
         'id': slide_id,
         'filename': filename,
@@ -62,30 +62,26 @@ def parse_pptx(file_path, slide_id, filename):
     }
 
     try:
-        # 转换为图片
+        # Convert to images
         images = pptx_to_images(file_path, dpi=300)
 
         if not images:
             result['status'] = 'ready'
-            result['content'] = '未能提取到任何幻灯片'
+            result['content'] = 'No slides extracted'
             return result
 
-        # 使用模型分析每页
+        # Analyze each page with model
         if api:
             analysis_results = []
             for i, img in enumerate(images):
-                # 简单的文本分析
-                analysis_results.append(f"第 {i+1} 页幻灯片")
+                analysis_results.append(f"Slide {i+1}")
 
             result['content'] = '\n'.join(analysis_results)
-            result['summary'] = f'该 PPTX 共包含 {len(images)} 页幻灯片'
+            result['summary'] = f'This PPTX contains {len(images)} slides'
 
-            # 可以进一步调用模型提取概念
-            # concepts = extract_concepts_from_images(images)
-            # result['concepts'] = concepts
         else:
-            result['content'] = f'该 PPTX 共包含 {len(images)} 页幻灯片'
-            result['summary'] = 'API 未配置，仅解析了页数'
+            result['content'] = f'This PPTX contains {len(images)} slides'
+            result['summary'] = 'API not configured, only slide count available'
 
         result['status'] = 'ready'
 
@@ -97,14 +93,13 @@ def parse_pptx(file_path, slide_id, filename):
 
 
 def parse_pdf(file_path, slide_id, filename):
-    """解析 PDF 文件"""
-    # 简化实现
+    """Parse PDF file"""
     result = {
         'id': slide_id,
         'filename': filename,
         'status': 'ready',
-        'content': 'PDF 解析功能待实现',
-        'summary': 'PDF 解析功能待实现',
+        'content': 'PDF parsing not implemented',
+        'summary': 'PDF parsing not implemented',
         'concepts': [],
         'createdAt': datetime.now().isoformat()
     }
@@ -112,14 +107,13 @@ def parse_pdf(file_path, slide_id, filename):
 
 
 def parse_image(file_path, slide_id, filename):
-    """解析图片文件"""
-    # 简化实现
+    """Parse image file"""
     result = {
         'id': slide_id,
         'filename': filename,
         'status': 'ready',
-        'content': '图片解析功能待实现',
-        'summary': '图片解析功能待实现',
+        'content': 'Image parsing not implemented',
+        'summary': 'Image parsing not implemented',
         'concepts': [],
         'createdAt': datetime.now().isoformat()
     }
@@ -127,7 +121,7 @@ def parse_image(file_path, slide_id, filename):
 
 
 def parse_txt(file_path, slide_id, filename):
-    """解析 TXT 文件，直接提取文字"""
+    """Parse TXT file - extract text directly"""
     result = {
         'id': slide_id,
         'filename': filename,
@@ -144,7 +138,7 @@ def parse_txt(file_path, slide_id, filename):
 
         result['content'] = content.strip()
 
-        # 简单的摘要：取前 200 字符
+        # Simple summary: first 200 characters
         if len(content) > 200:
             result['summary'] = content[:200].strip() + '...'
         else:
@@ -152,13 +146,13 @@ def parse_txt(file_path, slide_id, filename):
 
     except Exception as e:
         result['status'] = 'error'
-        result['error'] = f'TXT 读取失败: {str(e)}'
+        result['error'] = f'TXT read failed: {str(e)}'
 
     return result
 
 
 def parse_docx(file_path, slide_id, filename):
-    """解析 DOCX 文件，直接提取文字"""
+    """Parse DOCX file - extract text directly"""
     result = {
         'id': slide_id,
         'filename': filename,
@@ -178,7 +172,7 @@ def parse_docx(file_path, slide_id, filename):
 
         result['content'] = content
 
-        # 简单的摘要：取前 200 字符
+        # Simple summary: first 200 characters
         if len(content) > 200:
             result['summary'] = content[:200].strip() + '...'
         else:
@@ -186,6 +180,6 @@ def parse_docx(file_path, slide_id, filename):
 
     except Exception as e:
         result['status'] = 'error'
-        result['error'] = f'DOCX 解析失败: {str(e)}'
+        result['error'] = f'DOCX parse failed: {str(e)}'
 
     return result
