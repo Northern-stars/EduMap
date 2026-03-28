@@ -34,13 +34,9 @@ export default function MindMapNode({
   onMouseUp,
   onDragStart,
 }: Props) {
-  const { isDragToolActive, addMindMapNode, addMindMapEdge, mindMapData } = useCanvasStore()
+  const { isDragToolActive, setSelectedTerm } = useCanvasStore()
 
   const [editText, setEditText] = useState(node.text)
-  const [selectedText, setSelectedText] = useState('')
-  const [showTooltip, setShowTooltip] = useState(false)
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
-  const [isLoadingExplanation, setIsLoadingExplanation] = useState(false)
   const nodeRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -52,7 +48,7 @@ export default function MindMapNode({
     }
   }, [isEditing])
 
-  // Detect text selection
+  // Track text selection and store in global state
   useEffect(() => {
     const handleMouseUp = () => {
       if (isEditing || isDragToolActive) return
@@ -61,39 +57,27 @@ export default function MindMapNode({
       const text = selection?.toString().trim()
 
       if (text && text.length > 0) {
-        // Check if selection is within this node
         const range = selection?.getRangeAt(0)
         if (range && contentRef.current?.contains(range.commonAncestorContainer)) {
-          const rect = range.getBoundingClientRect()
-          const nodeRect = nodeRef.current?.getBoundingClientRect()
-          if (nodeRect) {
-            setSelectedText(text)
-            setTooltipPos({
-              x: rect.left - nodeRect.left + rect.width / 2,
-              y: rect.top - nodeRect.top - 10,
-            })
-            setShowTooltip(true)
-          }
+          setSelectedTerm(text, node.id)
         }
       } else {
-        setShowTooltip(false)
+        setSelectedTerm(null, null)
       }
     }
 
     document.addEventListener('mouseup', handleMouseUp)
     return () => document.removeEventListener('mouseup', handleMouseUp)
-  }, [isEditing, isDragToolActive])
+  }, [isEditing, isDragToolActive, setSelectedTerm, node.id])
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (isEditing) return
     e.stopPropagation()
-    setShowTooltip(false)
     // Only select and allow drag if drag tool is active
     if (isDragToolActive) {
       onSelect(e)
       onDragStart(e)
     }
-    // When drag tool is not active, let text selection happen naturally
   }
 
   const handleMouseUp = (e: React.MouseEvent) => {
@@ -101,14 +85,13 @@ export default function MindMapNode({
       onMouseUp?.()
       return
     }
-    // When drag tool is not active, check if text was selected
+    // Check if text was selected
     const selection = window.getSelection()
     const text = selection?.toString().trim()
     if (!text || text.length === 0) {
       onSelect(e)
       onMouseUp?.()
     }
-    // If text was selected, don't trigger connection logic
   }
 
   const handleDoubleClick = (e: React.MouseEvent) => {
@@ -128,56 +111,6 @@ export default function MindMapNode({
     } else if (e.key === 'Enter' && e.ctrlKey) {
       onUpdateText(editText)
       onEndEdit()
-    }
-  }
-
-  const handleExplain = async () => {
-    if (!selectedText || !mindMapData) return
-    setIsLoadingExplanation(true)
-    setShowTooltip(false)
-
-    try {
-      const res = await fetch('http://localhost:3001/api/chat/explain', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ term: selectedText }),
-      })
-      const data = await res.json()
-      if (data.explanation) {
-        // Create new node with explanation
-        const newNodeId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-        const newNode: MindMapNodeType = {
-          id: newNodeId,
-          text: `**${selectedText}**\n\n${data.explanation}`,
-          position: {
-            x: node.position.x + 220,
-            y: node.position.y + Math.random() * 100 - 50,
-          },
-        }
-        addMindMapNode(newNode)
-
-        // Add edge from current node to new node
-        const edgeId = `edge-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-        addMindMapEdge({
-          id: edgeId,
-          from: node.id,
-          to: newNodeId,
-        })
-
-        // Add to chat context
-        await fetch('http://localhost:3001/api/chat/context', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            role: 'assistant',
-            content: `用户选中了"${selectedText}"，以下是解释：\n\n${data.explanation}`,
-          }),
-        })
-      }
-    } catch (error) {
-      console.error('Failed to explain term:', error)
-    } finally {
-      setIsLoadingExplanation(false)
     }
   }
 
@@ -206,26 +139,6 @@ export default function MindMapNode({
       ) : (
         <div className="mindmap-node-content" ref={contentRef}>
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{node.text}</ReactMarkdown>
-        </div>
-      )}
-
-      {/* Selection tooltip - only show when drag tool is NOT active */}
-      {showTooltip && !isEditing && !isDragToolActive && (
-        <div
-          className="mindmap-tooltip"
-          style={{
-            left: tooltipPos.x,
-            top: tooltipPos.y,
-            transform: 'translate(-50%, -100%)',
-          }}
-        >
-          <button
-            onClick={handleExplain}
-            className="mindmap-tooltip-btn"
-            disabled={isLoadingExplanation}
-          >
-            {isLoadingExplanation ? '解释中...' : '解释'}
-          </button>
         </div>
       )}
 

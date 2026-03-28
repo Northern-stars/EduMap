@@ -95,6 +95,8 @@ interface CanvasState {
   isMindMapEditing: boolean
   editingMindMapNodeId: string | null
   isDragToolActive: boolean
+  selectedTerm: string | null  // Currently selected text in mindmap
+  selectedTermNodeId: string | null  // Node ID where the term was selected
 
   // Actions
   addCard: (concept: Concept, position?: { x: number; y: number }) => void
@@ -131,6 +133,7 @@ interface CanvasState {
   setMindMapEditing: (editing: boolean) => void
   setEditingMindMapNode: (id: string | null) => void
   setDragToolActive: (active: boolean) => void
+  setSelectedTerm: (term: string | null, nodeId?: string | null) => void
   applyMindMapLayout: () => void
 }
 
@@ -155,6 +158,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   isMindMapEditing: false,
   editingMindMapNodeId: null,
   isDragToolActive: false,
+  selectedTerm: null,
+  selectedTermNodeId: null,
 
   addCard: (concept, position) => {
     const id = `card-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
@@ -359,6 +364,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   setEditingMindMapNode: (id) => set({ editingMindMapNodeId: id }),
 
   setDragToolActive: (active) => set({ isDragToolActive: active }),
+
+  setSelectedTerm: (term, nodeId = null) => set({ selectedTerm: term, selectedTermNodeId: nodeId }),
 
   applyMindMapLayout: () => {
     const { mindMapData } = get()

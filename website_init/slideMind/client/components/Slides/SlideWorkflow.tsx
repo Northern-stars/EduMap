@@ -228,7 +228,7 @@ export default function SlideWorkflow() {
                         id: `summary-${Date.now()}`,
                         slideId: activeSlide.id,
                         title: `📄 ${activeSlide.filename || '文件摘要'}`,
-                        description: activeSlide.summary,
+                        description: activeSlide.summary || '',
                       }
                       addCard(summaryCardConcept)
                     }}

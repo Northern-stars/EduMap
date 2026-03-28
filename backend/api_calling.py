@@ -503,6 +503,7 @@ class api_access:
         Returns:
             str: Explanation of the term
         """
+        print(f"Explaining term: {term}")
         
         prompt = f"Briefly explain the following term or concept in one paragraph:\n\n{term}"
 

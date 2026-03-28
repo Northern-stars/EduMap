@@ -1065,6 +1065,7 @@ html, body {
   font-size: 14px;
   line-height: 1.6;
   color: var(--text-primary);
+  user-select: text;
 }
 
 .mindmap-node-content h1,
@@ -1158,7 +1159,7 @@ html, body {
 
 .mindmap-tooltip {
   position: absolute;
-  z-index: 100;
+  z-index: 150;
   pointer-events: auto;
 }
 

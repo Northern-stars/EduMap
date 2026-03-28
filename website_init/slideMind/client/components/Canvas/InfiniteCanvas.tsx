@@ -40,6 +40,9 @@ export default function InfiniteCanvas() {
     setMindMapData,
     applyMindMapLayout,
     isDragToolActive,
+    selectedTerm,
+    selectedTermNodeId,
+    setSelectedTerm,
   } = useCanvasStore()
 
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -267,6 +270,60 @@ export default function InfiniteCanvas() {
     setMindMapConnectionStart(null)
   }
 
+  // Explain selected term - creates a new node with explanation
+  const handleExplain = async () => {
+    if (!selectedTerm || !selectedTermNodeId || !mindMapData) return
+
+    const sourceNode = mindMapData.nodes.find((n) => n.id === selectedTermNodeId)
+    if (!sourceNode) return
+
+    try {
+      const res = await fetch('http://localhost:3001/api/chat/explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ term: selectedTerm }),
+      })
+      const data = await res.json()
+
+      if (data.explanation) {
+        // Create new node with explanation
+        const newNodeId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+        const newNode: MindMapNode = {
+          id: newNodeId,
+          text: `**${selectedTerm}**\n\n${data.explanation}`,
+          position: {
+            x: sourceNode.position.x + 220,
+            y: sourceNode.position.y + Math.random() * 100 - 50,
+          },
+        }
+        addMindMapNode(newNode)
+
+        // Add edge from source node to new node
+        const edgeId = `edge-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+        addMindMapEdge({
+          id: edgeId,
+          from: sourceNode.id,
+          to: newNodeId,
+        })
+
+        // Add to chat context
+        await fetch('http://localhost:3001/api/chat/context', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            role: 'assistant',
+            content: `用户选中了"${selectedTerm}"，以下是解释：\n\n${data.explanation}`,
+          }),
+        })
+
+        // Clear selection
+        setSelectedTerm(null, null)
+      }
+    } catch (error) {
+      console.error('Failed to explain term:', error)
+    }
+  }
+
   // Get mindmap node center for connection lines
   const getMindMapNodeCenter = (nodeId: string) => {
     const node = mindMapData?.nodes.find((n) => n.id === nodeId)
@@ -478,6 +535,7 @@ export default function InfiniteCanvas() {
           onAddNode={handleFloatingAddNode}
           onDeleteSelected={handleFloatingDeleteSelected}
           onAutoLayout={handleFloatingAutoLayout}
+          onExplain={handleExplain}
         />
       )}
 
