@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useCanvasStore, Concept, ChatMessage } from '@/lib/canvas-store'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface Message {
   id: string
@@ -22,6 +24,7 @@ export default function ChatPanel() {
   ])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [conceptSummaryCollapsed, setConceptSummaryCollapsed] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Listen for AI messages from other components (e.g., SlideUploader)
@@ -103,39 +106,59 @@ export default function ChatPanel() {
       {/* Summary section - Lovart style */}
       {activeSlide && (
         <div className="concept-summary">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-[var(--primary-light)] flex items-center justify-center">
-              <svg className="w-4 h-4 text-[var(--primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+          {/* Header with collapse button */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-[var(--primary-light)] flex items-center justify-center">
+                <svg className="w-4 h-4 text-[var(--primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <span className="text-sm font-medium text-[var(--text-primary)]">{activeSlide.filename}</span>
             </div>
-            <span className="text-sm font-medium text-[var(--text-primary)]">{activeSlide.filename}</span>
-          </div>
-          
-          {activeSlide.summary && (
-            <p className="text-sm text-[var(--text-secondary)] mb-4 leading-relaxed">
-              {activeSlide.summary}
-            </p>
-          )}
-          
-          {activeSlide.concepts.length > 0 && (
-            <div className="concept-summary-title">提取的概念</div>
-          )}
-          
-          <div className="concept-list">
-            {activeSlide.concepts.map((concept) => (
-              <button
-                key={concept.id}
-                onClick={() => handleConceptClick(concept)}
-                className="concept-item"
+            <button
+              onClick={() => setConceptSummaryCollapsed(!conceptSummaryCollapsed)}
+              className="w-6 h-6 flex items-center justify-center rounded-full bg-[var(--bg-tertiary)] hover:bg-[var(--border)] transition-colors"
+              title={conceptSummaryCollapsed ? '展开' : '收起'}
+            >
+              <svg
+                className={`w-3.5 h-3.5 text-[var(--text-secondary)] transition-transform duration-200 ${conceptSummaryCollapsed ? '-rotate-90' : 'rotate-0'}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                <div className="concept-item-title">
-                  <span>{concept.title}</span>
-                  <span className="add-hint">+ 添加</span>
-                </div>
-                <p className="concept-item-desc">{concept.description}</p>
-              </button>
-            ))}
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Collapsible content */}
+          <div className={`overflow-hidden transition-all duration-200 ease-in-out ${conceptSummaryCollapsed ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'}`}>
+            {activeSlide.summary && (
+              <p className="text-sm text-[var(--text-secondary)] mb-4 leading-relaxed">
+                {activeSlide.summary}
+              </p>
+            )}
+
+            {activeSlide.concepts.length > 0 && (
+              <div className="concept-summary-title">提取的概念</div>
+            )}
+
+            <div className="concept-list">
+              {activeSlide.concepts.map((concept) => (
+                <button
+                  key={concept.id}
+                  onClick={() => handleConceptClick(concept)}
+                  className="concept-item"
+                >
+                  <div className="concept-item-title">
+                    <span>{concept.title}</span>
+                    <span className="add-hint">+ 添加</span>
+                  </div>
+                  <p className="concept-item-desc">{concept.description}</p>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -148,7 +171,11 @@ export default function ChatPanel() {
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-slideUp`}
           >
             <div className={`chat-bubble ${msg.role === 'user' ? 'user' : msg.role === 'system' ? 'bg-[var(--bg-tertiary)] text-center' : 'assistant'}`}>
-              {msg.content}
+              {msg.role === 'user' ? (
+                msg.content
+              ) : (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+              )}
             </div>
           </div>
         ))}
