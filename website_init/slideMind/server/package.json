@@ -1,0 +1,19 @@
+{
+  "name": "slidemind-server",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jszip": "^3.10.1",
+    "multer": "^1.4.5-lts.1",
+    "pdf-parse": "^1.1.1",
+    "unzipper": "^0.10.14",
+    "xmldom": "^0.6.0"
+  }
+}
