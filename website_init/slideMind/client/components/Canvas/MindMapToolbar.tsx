@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useCanvasStore, MindMapData, MindMapNode } from '@/lib/canvas-store'
+import { useCanvasStore, MindMapData, MindMapNode, MindMapEdge } from '@/lib/canvas-store'
 
 export default function MindMapToolbar() {
   const {
@@ -10,6 +10,7 @@ export default function MindMapToolbar() {
     setMindMapMode,
     setMindMapData,
     addMindMapNode,
+    addMindMapEdge,
     removeMindMapNode,
     selectedMindMapNodeId,
     selectMindMapNode,
@@ -22,8 +23,14 @@ export default function MindMapToolbar() {
   const [mindMapList, setMindMapList] = useState<{ id: string; title: string; nodeCount: number }[]>([])
   const [showLoadModal, setShowLoadModal] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
+  const [showAssociateModal, setShowAssociateModal] = useState(false)
   const [saveFileName, setSaveFileName] = useState('')
   const [newNodeText, setNewNodeText] = useState('')
+  const [associateText, setAssociateText] = useState('')
+  const [associateMaxIter, setAssociateMaxIter] = useState(2)
+  const [associateMaxWord, setAssociateMaxWord] = useState(3)
+  const [isAssociating, setIsAssociating] = useState(false)
+  const [associateProgress, setAssociateProgress] = useState('')
 
   const handleEnterMindMap = () => {
     setMindMapMode(true)
@@ -137,6 +144,104 @@ export default function MindMapToolbar() {
     }
   }
 
+  const handleConceptAssociate = async () => {
+    if (!associateText.trim()) return
+
+    // Create mindmap data synchronously first
+    const mindmapId = `mindmap-${Date.now()}`
+    const initialData: MindMapData = {
+      id: mindmapId,
+      title: '概念联想',
+      nodes: [],
+      edges: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    setMindMapData(initialData)
+
+    setIsAssociating(true)
+    setAssociateProgress('开始分析...')
+
+    try {
+      const response = await fetch('http://localhost:3001/api/mindmaps/associate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: associateText,
+          max_iter: associateMaxIter,
+          max_word: associateMaxWord,
+          base_position: { x: 400, y: 300 }
+        }),
+      })
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('无法读取响应')
+      }
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      // Use local accumulators to avoid stale state issues
+      const localNodes: MindMapNode[] = []
+      const localEdges: MindMapEdge[] = []
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            continue
+          }
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim()
+            try {
+              const parsed = JSON.parse(data)
+
+              if (parsed.id && parsed.text) {
+                // It's a node - add to local accumulator
+                localNodes.push(parsed as MindMapNode)
+                setAssociateProgress(`已创建节点: ${parsed.text.slice(0, 30)}...`)
+              } else if (parsed.from && parsed.to) {
+                // It's an edge - add to local accumulator
+                localEdges.push(parsed as MindMapEdge)
+              } else if (parsed.total_nodes !== undefined) {
+                setAssociateProgress(`完成！共创建 ${parsed.total_nodes} 个节点`)
+              }
+            } catch (e) {
+              // Ignore parse errors
+            }
+          }
+        }
+      }
+
+      // Batch update with all nodes and edges at once
+      const { mindMapData: currentData } = useCanvasStore.getState()
+      if (currentData) {
+        setMindMapData({
+          ...currentData,
+          nodes: [...currentData.nodes, ...localNodes],
+          edges: [...currentData.edges, ...localEdges],
+        })
+      }
+    } catch (error) {
+      console.error('Concept association failed:', error)
+      setAssociateProgress('错误: ' + (error as Error).message)
+    } finally {
+      setIsAssociating(false)
+      setTimeout(() => {
+        setShowAssociateModal(false)
+        setAssociateProgress('')
+        setAssociateText('')
+      }, 1500)
+    }
+  }
+
   if (!mindMapMode) {
     return (
       <div className="mindmap-toolbar">
@@ -206,6 +311,13 @@ export default function MindMapToolbar() {
         <div className="mindmap-toolbar-divider" />
 
         <div className="mindmap-toolbar-section">
+          <button onClick={() => setShowAssociateModal(true)} className="mindmap-toolbar-btn">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            概念联想
+          </button>
+
           <button onClick={applyMindMapLayout} className="mindmap-toolbar-btn">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
@@ -311,6 +423,79 @@ export default function MindMapToolbar() {
               </button>
               <button onClick={handleConfirmSave} className="btn btn-primary" disabled={!saveFileName.trim() || isLoading}>
                 {isLoading ? '保存中...' : '确认保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Concept Associate Modal */}
+      {showAssociateModal && (
+        <div className="modal-overlay" onClick={() => !isAssociating && setShowAssociateModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>自动概念联想</h3>
+              <button onClick={() => !isAssociating && setShowAssociateModal(false)} className="modal-close" disabled={isAssociating}>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <label className="text-sm font-medium text-[var(--text-secondary)] mb-2 block">输入文本</label>
+                  <textarea
+                    value={associateText}
+                    onChange={(e) => setAssociateText(e.target.value)}
+                    placeholder="输入要分析的文字内容..."
+                    className="w-full h-32 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)] resize-none"
+                    disabled={isAssociating}
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="text-sm font-medium text-[var(--text-secondary)] mb-2 block">最大迭代次数</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={5}
+                      value={associateMaxIter}
+                      onChange={(e) => setAssociateMaxIter(Math.max(1, Math.min(5, parseInt(e.target.value) || 1)))}
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)]"
+                      disabled={isAssociating}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-sm font-medium text-[var(--text-secondary)] mb-2 block">每步最大概念数</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={associateMaxWord}
+                      onChange={(e) => setAssociateMaxWord(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)]"
+                      disabled={isAssociating}
+                    />
+                  </div>
+                </div>
+                {isAssociating && associateProgress && (
+                  <div className="text-sm text-[var(--primary)] text-center py-2">
+                    {associateProgress}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setShowAssociateModal(false)} className="btn btn-secondary" disabled={isAssociating}>
+                取消
+              </button>
+              <button
+                onClick={handleConceptAssociate}
+                className="btn btn-primary"
+                disabled={!associateText.trim() || isAssociating}
+              >
+                {isAssociating ? '分析中...' : '开始联想'}
               </button>
             </div>
           </div>

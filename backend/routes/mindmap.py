@@ -1,12 +1,14 @@
-from flask import Blueprint, request, jsonify, send_from_directory
+from flask import Blueprint, request, jsonify, send_from_directory, Response
 from services.mindmap_service import (
     get_all_mindmaps,
     get_mindmap,
     save_mindmap,
     delete_mindmap,
     create_empty_mindmap,
+    concept_associate,
     MINDMAPS_DIR
 )
+import json
 
 mindmap_bp = Blueprint('mindmap', __name__)
 
@@ -63,3 +65,49 @@ def delete_mindmap_by_id(mindmap_id):
     if not success:
         return jsonify({'error': 'Mindmap not found'}), 404
     return jsonify({'status': 'ok'})
+
+
+@mindmap_bp.route('/associate', methods=['POST'])
+def associate_concepts():
+    """自动概念联想 - SSE 流式返回节点
+
+    Request body:
+    {
+        "text": "输入文本",
+        "max_iter": 2,
+        "max_word": 3,
+        "base_position": {"x": 400, "y": 300}
+    }
+
+    Returns: Server-Sent Events stream
+    """
+    data = request.get_json() or {}
+    text = data.get('text', '')
+    max_iter = data.get('max_iter', 2)
+    max_word = data.get('max_word', 3)
+    base_position = data.get('base_position', {"x": 400, "y": 300})
+
+    if not text:
+        return jsonify({'error': 'Text is required'}), 400
+
+    def generate():
+        try:
+            for event in concept_associate(text, max_iter, max_word, base_position):
+                if event['type'] == 'node':
+                    yield f"event: node\ndata: {json.dumps(event['data'], ensure_ascii=False)}\n\n"
+                elif event['type'] == 'edge':
+                    yield f"event: edge\ndata: {json.dumps(event['data'], ensure_ascii=False)}\n\n"
+                elif event['type'] == 'done':
+                    yield f"event: done\ndata: {json.dumps(event['data'], ensure_ascii=False)}\n\n"
+        except Exception as e:
+            yield f"event: error\ndata: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+
+    return Response(
+        generate(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'
+        }
+    )
