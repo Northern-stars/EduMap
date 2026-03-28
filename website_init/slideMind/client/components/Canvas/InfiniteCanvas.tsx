@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useCanvasStore, CanvasCard, CanvasConnection } from '@/lib/canvas-store'
+import { useCanvasStore, CanvasCard, CanvasConnection, MindMapEdge, MindMapNode } from '@/lib/canvas-store'
+import MindMapNodeComponent from './MindMapNode'
+import MindMapFloatingToolbar from './MindMapFloatingToolbar'
 
 export default function InfiniteCanvas() {
   const {
@@ -22,6 +24,20 @@ export default function InfiniteCanvas() {
     addConnection,
     setZoom,
     setPanOffset,
+    // MindMap
+    mindMapMode,
+    mindMapData,
+    selectedMindMapNodeId,
+    isMindMapEditing,
+    editingMindMapNodeId,
+    selectMindMapNode,
+    updateMindMapNode,
+    addMindMapNode,
+    removeMindMapNode,
+    addMindMapEdge,
+    setMindMapEditing,
+    setEditingMindMapNode,
+    applyMindMapLayout,
   } = useCanvasStore()
 
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -30,6 +46,10 @@ export default function InfiniteCanvas() {
   const [draggingCard, setDraggingCard] = useState<string | null>(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [connectingMousePos, setConnectingMousePos] = useState({ x: 0, y: 0 })
+
+  // MindMap connection mode
+  const [isMindMapConnecting, setIsMindMapConnecting] = useState(false)
+  const [mindMapConnectionStart, setMindMapConnectionStart] = useState<string | null>(null)
 
   // Handle wheel zoom
   const handleWheel = useCallback((e: WheelEvent) => {
@@ -53,6 +73,13 @@ export default function InfiniteCanvas() {
     if (e.target === canvasRef.current || (e.target as HTMLElement).classList.contains('canvas-area')) {
       if (e.button === 0 && !draggingCard) {
         deselectAll()
+        if (mindMapMode) {
+          selectMindMapNode(null)
+          if (isMindMapConnecting) {
+            setIsMindMapConnecting(false)
+            setMindMapConnectionStart(null)
+          }
+        }
       }
       if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
         setIsPanning(true)
@@ -119,6 +146,94 @@ export default function InfiniteCanvas() {
     }
   }
 
+  // MindMap node handlers
+  const handleMindMapNodeSelect = (nodeId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+
+    if (e.shiftKey && !isMindMapConnecting) {
+      setIsMindMapConnecting(true)
+      setMindMapConnectionStart(nodeId)
+      return
+    }
+
+    selectMindMapNode(nodeId)
+  }
+
+  const handleMindMapNodeMouseUp = (nodeId: string) => {
+    if (isMindMapConnecting && mindMapConnectionStart && mindMapConnectionStart !== nodeId) {
+      const edgeId = `edge-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+      addMindMapEdge({
+        id: edgeId,
+        from: mindMapConnectionStart,
+        to: nodeId,
+      })
+      setIsMindMapConnecting(false)
+      setMindMapConnectionStart(null)
+    }
+  }
+
+  const handleMindMapNodePositionChange = (nodeId: string, position: { x: number; y: number }) => {
+    updateMindMapNode(nodeId, { position })
+  }
+
+  const handleMindMapNodeTextUpdate = (nodeId: string, text: string) => {
+    updateMindMapNode(nodeId, { text })
+  }
+
+  // Floating toolbar handlers
+  const handleFloatingAddNode = () => {
+    if (!mindMapData) return
+    const newNode: MindMapNode = {
+      id: `node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      text: '# 新节点\n点击编辑内容',
+      position: {
+        x: 200 + Math.random() * 400,
+        y: 200 + Math.random() * 200,
+      },
+    }
+    addMindMapNode(newNode)
+    selectMindMapNode(newNode.id)
+  }
+
+  const handleFloatingDeleteSelected = () => {
+    if (selectedMindMapNodeId) {
+      removeMindMapNode(selectedMindMapNodeId)
+      selectMindMapNode(null)
+    }
+  }
+
+  const handleFloatingAutoLayout = () => {
+    applyMindMapLayout()
+  }
+
+  const handleStartFloatingConnect = () => {
+    setIsMindMapConnecting(true)
+  }
+
+  const handleStopFloatingConnect = () => {
+    setIsMindMapConnecting(false)
+    setMindMapConnectionStart(null)
+  }
+
+  // Get mindmap node center for connection lines
+  const getMindMapNodeCenter = (nodeId: string) => {
+    const node = mindMapData?.nodes.find((n) => n.id === nodeId)
+    if (!node) return { x: 0, y: 0 }
+    return {
+      x: node.position.x + 90,
+      y: node.position.y + 30,
+    }
+  }
+
+  // Generate SVG path for mindmap edge
+  const getMindMapEdgePath = (edge: MindMapEdge) => {
+    const from = getMindMapNodeCenter(edge.from)
+    const to = getMindMapNodeCenter(edge.to)
+    const dx = to.x - from.x
+    const midX = dx / 2
+    return `M ${from.x} ${from.y} Q ${from.x + midX} ${from.y} ${(from.x + to.x) / 2} ${(from.y + to.y) / 2} T ${to.x} ${to.y}`
+  }
+
   // Get card center for connection lines
   const getCardCenter = (cardId: string) => {
     const card = cards.find((c) => c.id === cardId)
@@ -142,7 +257,7 @@ export default function InfiniteCanvas() {
     <div
       ref={canvasRef}
       className="canvas-container"
-      style={{ cursor: isPanning ? 'grabbing' : isConnecting ? 'crosshair' : 'default' }}
+      style={{ cursor: isPanning ? 'grabbing' : isMindMapConnecting ? 'crosshair' : isConnecting ? 'crosshair' : 'default' }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -175,10 +290,30 @@ export default function InfiniteCanvas() {
               <stop offset="50%" stopColor="#A855F7" />
               <stop offset="100%" stopColor="#EC4899" />
             </linearGradient>
+            <marker
+              id="arrowhead"
+              markerWidth="10"
+              markerHeight="7"
+              refX="9"
+              refY="3.5"
+              orient="auto"
+            >
+              <polygon points="0 0, 10 3.5, 0 7" fill="#A855F7" />
+            </marker>
           </defs>
-          
-          {/* Existing connections */}
-          {connections.map((conn) => (
+
+          {/* MindMap edges */}
+          {mindMapMode && (mindMapData?.edges || []).map((edge) => (
+            <g key={edge.id}>
+              <path
+                d={getMindMapEdgePath(edge)}
+                className="mindmap-edge"
+              />
+            </g>
+          ))}
+
+          {/* Regular connections */}
+          {!mindMapMode && connections.map((conn) => (
             <g key={conn.id}>
               <path
                 d={getConnectionPath(conn)}
@@ -195,13 +330,42 @@ export default function InfiniteCanvas() {
           ))}
 
           {/* Connecting line preview */}
-          {isConnecting && connectionStart && (
+          {isConnecting && connectionStart && !mindMapMode && (
             <path
               d={`M ${getCardCenter(connectionStart).x} ${getCardCenter(connectionStart).y} L ${connectingMousePos.x} ${connectingMousePos.y}`}
               className="connection-preview"
             />
           )}
+
+          {/* MindMap connection preview */}
+          {isMindMapConnecting && mindMapConnectionStart && (
+            <path
+              d={`M ${getMindMapNodeCenter(mindMapConnectionStart).x} ${getMindMapNodeCenter(mindMapConnectionStart).y} L ${connectingMousePos.x} ${connectingMousePos.y}`}
+              className="connection-preview"
+            />
+          )}
         </svg>
+
+        {/* MindMap nodes */}
+        {mindMapMode && (mindMapData?.nodes || []).map((node) => (
+          <MindMapNodeComponent
+            key={node.id}
+            node={node}
+            isSelected={selectedMindMapNodeId === node.id}
+            isEditing={editingMindMapNodeId === node.id}
+            onSelect={(e) => handleMindMapNodeSelect(node.id, e)}
+            onStartEdit={() => {
+              setEditingMindMapNode(node.id)
+              setMindMapEditing(true)
+            }}
+            onEndEdit={() => {
+              setEditingMindMapNode(null)
+              setMindMapEditing(false)
+            }}
+            onUpdateText={(text) => handleMindMapNodeTextUpdate(node.id, text)}
+            onPositionChange={(pos) => handleMindMapNodePositionChange(node.id, pos)}
+          />
+        ))}
 
         {/* Cards */}
         {cards.map((card) => (
@@ -248,6 +412,18 @@ export default function InfiniteCanvas() {
       <div className="zoom-indicator">
         {Math.round(zoom * 100)}%
       </div>
+
+      {/* MindMap Floating Toolbar */}
+      {mindMapMode && (
+        <MindMapFloatingToolbar
+          isConnecting={isMindMapConnecting}
+          onStartConnect={handleStartFloatingConnect}
+          onStopConnect={handleStopFloatingConnect}
+          onAddNode={handleFloatingAddNode}
+          onDeleteSelected={handleFloatingDeleteSelected}
+          onAutoLayout={handleFloatingAutoLayout}
+        />
+      )}
 
       {/* Empty state */}
       {cards.length === 0 && (

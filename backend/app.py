@@ -12,9 +12,11 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # Register blueprints
 from routes.slides import slides_bp
 from routes.chat import chat_bp
+from routes.mindmap import mindmap_bp
 
 app.register_blueprint(slides_bp, url_prefix='/api/slides')
 app.register_blueprint(chat_bp, url_prefix='/api/chat')
+app.register_blueprint(mindmap_bp, url_prefix='/api/mindmaps')
 
 @app.route('/api/health')
 def health():

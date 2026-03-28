@@ -39,6 +39,29 @@ export interface ChatMessage {
   timestamp: Date
 }
 
+// MindMap types
+export interface MindMapNode {
+  id: string
+  text: string
+  position: { x: number; y: number }
+}
+
+export interface MindMapEdge {
+  id: string
+  from: string
+  to: string
+  label?: string
+}
+
+export interface MindMapData {
+  id: string
+  title: string
+  nodes: MindMapNode[]
+  edges: MindMapEdge[]
+  createdAt: string
+  updatedAt: string
+}
+
 interface CanvasState {
   // Canvas elements
   cards: CanvasCard[]
@@ -65,6 +88,13 @@ interface CanvasState {
   lastAiMessage: ChatMessage | null
   setLastAiMessage: (message: ChatMessage | null) => void
 
+  // MindMap mode
+  mindMapMode: boolean
+  mindMapData: MindMapData | null
+  selectedMindMapNodeId: string | null
+  isMindMapEditing: boolean
+  editingMindMapNodeId: string | null
+
   // Actions
   addCard: (concept: Concept, position?: { x: number; y: number }) => void
   removeCard: (cardId: string) => void
@@ -87,6 +117,19 @@ interface CanvasState {
   addSlide: (slide: Slide) => void
   setActiveSlide: (slideId: string) => void
   updateSlideSummary: (slideId: string, summary: string, concepts: Concept[]) => void
+
+  // MindMap actions
+  setMindMapMode: (enabled: boolean) => void
+  setMindMapData: (data: MindMapData | null) => void
+  addMindMapNode: (node: MindMapNode) => void
+  updateMindMapNode: (id: string, updates: Partial<MindMapNode>) => void
+  removeMindMapNode: (id: string) => void
+  addMindMapEdge: (edge: MindMapEdge) => void
+  removeMindMapEdge: (id: string) => void
+  selectMindMapNode: (id: string | null) => void
+  setMindMapEditing: (editing: boolean) => void
+  setEditingMindMapNode: (id: string | null) => void
+  applyMindMapLayout: () => void
 }
 
 export const useCanvasStore = create<CanvasState>((set, get) => ({
@@ -102,6 +145,13 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   slides: [],
   activeSlideId: null,
   lastAiMessage: null,
+
+  // MindMap initial state
+  mindMapMode: false,
+  mindMapData: null,
+  selectedMindMapNodeId: null,
+  isMindMapEditing: false,
+  editingMindMapNodeId: null,
 
   addCard: (concept, position) => {
     const id = `card-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
@@ -227,5 +277,169 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
   setLastAiMessage: (message) => {
     set({ lastAiMessage: message })
+  },
+
+  // MindMap actions
+  setMindMapMode: (enabled) => set({ mindMapMode: enabled }),
+
+  setMindMapData: (data) => set({
+    mindMapData: data ? { ...data, nodes: data.nodes || [], edges: data.edges || [] } : null
+  }),
+
+  addMindMapNode: (node) => {
+    const { mindMapData } = get()
+    if (!mindMapData) return
+    set({
+      mindMapData: {
+        ...mindMapData,
+        nodes: [...(mindMapData.nodes || []), node],
+      },
+    })
+  },
+
+  updateMindMapNode: (id, updates) => {
+    const { mindMapData } = get()
+    if (!mindMapData) return
+    set({
+      mindMapData: {
+        ...mindMapData,
+        nodes: (mindMapData.nodes || []).map((n) =>
+          n.id === id ? { ...n, ...updates } : n
+        ),
+      },
+    })
+  },
+
+  removeMindMapNode: (id) => {
+    const { mindMapData } = get()
+    if (!mindMapData) return
+    set({
+      mindMapData: {
+        ...mindMapData,
+        nodes: (mindMapData.nodes || []).filter((n) => n.id !== id),
+        edges: (mindMapData.edges || []).filter((e) => e.from !== id && e.to !== id),
+      },
+    })
+  },
+
+  addMindMapEdge: (edge) => {
+    const { mindMapData } = get()
+    if (!mindMapData) return
+    // Prevent duplicate edges
+    const exists = (mindMapData.edges || []).some(
+      (e) => e.from === edge.from && e.to === edge.to
+    )
+    if (exists) return
+    set({
+      mindMapData: {
+        ...mindMapData,
+        edges: [...(mindMapData.edges || []), edge],
+      },
+    })
+  },
+
+  removeMindMapEdge: (id) => {
+    const { mindMapData } = get()
+    if (!mindMapData) return
+    set({
+      mindMapData: {
+        ...mindMapData,
+        edges: (mindMapData.edges || []).filter((e) => e.id !== id),
+      },
+    })
+  },
+
+  selectMindMapNode: (id) => set({ selectedMindMapNodeId: id }),
+
+  setMindMapEditing: (editing) => set({ isMindMapEditing: editing }),
+
+  setEditingMindMapNode: (id) => set({ editingMindMapNodeId: id }),
+
+  applyMindMapLayout: () => {
+    const { mindMapData } = get()
+    if (!mindMapData || !mindMapData.nodes || mindMapData.nodes.length === 0) return
+
+    // Build adjacency list and calculate layers using BFS
+    const adjList = new Map<string, string[]>()
+    const inDegree = new Map<string, number>()
+    const allNodeIds = mindMapData.nodes.map((n) => n.id)
+
+    // Initialize
+    allNodeIds.forEach((id) => {
+      adjList.set(id, [])
+      inDegree.set(id, 0)
+    })
+
+    // Build graph
+    ;(mindMapData.edges || []).forEach((edge) => {
+      adjList.get(edge.from)?.push(edge.to)
+      inDegree.set(edge.to, (inDegree.get(edge.to) || 0) + 1)
+    })
+
+    // Find root nodes (in-degree = 0) or use first node
+    const rootNodes = allNodeIds.filter((id) => inDegree.get(id) === 0)
+    const startNodes = rootNodes.length > 0 ? rootNodes : [allNodeIds[0]]
+
+    // BFS to assign layers
+    const layers = new Map<string, number>()
+    const queue: string[] = [...startNodes]
+    startNodes.forEach((id) => layers.set(id, 0))
+
+    while (queue.length > 0) {
+      const current = queue.shift()!
+      const currentLayer = layers.get(current) || 0
+      const children = adjList.get(current) || []
+
+      children.forEach((child) => {
+        if (!layers.has(child)) {
+          layers.set(child, currentLayer + 1)
+          queue.push(child)
+        } else {
+          // Update to minimum layer if already visited
+          layers.set(child, Math.min(layers.get(child)!, currentLayer + 1))
+        }
+      })
+    }
+
+    // Group nodes by layer
+    const layerGroups = new Map<number, string[]>()
+    layers.forEach((layer, nodeId) => {
+      if (!layerGroups.has(layer)) {
+        layerGroups.set(layer, [])
+      }
+      layerGroups.get(layer)!.push(nodeId)
+    })
+
+    // Calculate positions
+    const spacingX = 220
+    const spacingY = 120
+    const nodeWidth = 180
+    const nodeHeight = 60
+
+    const updatedNodes = (mindMapData.nodes || []).map((node) => {
+      const layer = layers.get(node.id) || 0
+      const sameLayerNodes = layerGroups.get(layer) || []
+      const indexInLayer = sameLayerNodes.indexOf(node.id)
+      const totalInLayer = sameLayerNodes.length
+
+      // Center horizontally, offset vertically by layer
+      const totalWidth = totalInLayer * spacingX
+      const startX = (totalWidth - nodeWidth) / 2
+
+      return {
+        ...node,
+        position: {
+          x: startX + indexInLayer * spacingX,
+          y: layer * spacingY + 100,
+        },
+      }
+    })
+
+    set({
+      mindMapData: {
+        ...mindMapData,
+        nodes: updatedNodes,
+      },
+    })
   },
 }))

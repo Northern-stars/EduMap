@@ -6,67 +6,67 @@ import CanvasToolbar from '@/components/Canvas/CanvasToolbar'
 import ChatPanel from '@/components/Chat/ChatPanel'
 import SlideUploader from '@/components/Slides/SlideUploader'
 import ConceptImporter from '@/components/Slides/ConceptImporter'
+import MindMapToolbar from '@/components/Canvas/MindMapToolbar'
 import { useCanvasStore } from '@/lib/canvas-store'
 
 export default function Home() {
   const [showUploader, setShowUploader] = useState(false)
   const [showImporter, setShowImporter] = useState(false)
-  const { slides, cards } = useCanvasStore()
+  const { slides, cards, mindMapMode } = useCanvasStore()
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[var(--bg-primary)]">
+    <div className="app-root">
       {/* Toolbar */}
       <CanvasToolbar />
+      {mindMapMode && <MindMapToolbar />}
 
-      {/* Main content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Canvas area */}
-        <div className="flex-1 relative">
-          <InfiniteCanvas />
-          
-          {/* Floating action buttons - Lovart style */}
-          <div className="fab-container">
-            <button
-              onClick={() => setShowImporter(true)}
-              className="fab fab-secondary"
-              title="导入 AI 概念"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </button>
-            
-            <button
-              onClick={() => setShowUploader(true)}
-              className="fab fab-primary"
-              title="上传 Slide"
-            >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
-          </div>
+      {/* Main content area */}
+      <div className="app-main">
+        {/* Canvas - directly placed without extra wrapper */}
+        <InfiniteCanvas />
 
-          {/* Canvas hints */}
-          {cards.length === 0 && (
-            <div className="canvas-hints animate-fadeIn">
-              <div className="hint-item">
-                <kbd>Shift</kbd>
-                <span>+ 点击卡片连接概念</span>
-              </div>
-              <div className="hint-item">
-                <kbd>Space</kbd>
-                <span>+ 拖拽平移画布</span>
-              </div>
-              <div className="hint-item">
-                <kbd>⌘</kbd>
-                <span>+ 点击多选卡片</span>
-              </div>
-            </div>
-          )}
+        {/* FABs */}
+        <div className="fab-container">
+          <button
+            onClick={() => setShowImporter(true)}
+            className="fab fab-secondary"
+            title="导入 AI 概念"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          </button>
+
+          <button
+            onClick={() => setShowUploader(true)}
+            className="fab fab-primary"
+            title="上传 Slide"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
         </div>
 
-        {/* Chat Panel - Lovart style */}
+        {/* Canvas hints */}
+        {cards.length === 0 && !mindMapMode && (
+          <div className="canvas-hints animate-fadeIn">
+            <div className="hint-item">
+              <kbd>Shift</kbd>
+              <span>+ 点击卡片连接概念</span>
+            </div>
+            <div className="hint-item">
+              <kbd>Space</kbd>
+              <span>+ 拖拽平移画布</span>
+            </div>
+            <div className="hint-item">
+              <kbd>⌘</kbd>
+              <span>+ 点击多选卡片</span>
+            </div>
+          </div>
+        )}
+
+        {/* Chat Panel */}
         <ChatPanel />
       </div>
 

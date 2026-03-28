@@ -3,7 +3,7 @@
 import { useCanvasStore } from '@/lib/canvas-store'
 
 export default function CanvasToolbar() {
-  const { zoom, showGrid, setZoom, toggleGrid, cards, deselectAll, slides } = useCanvasStore()
+  const { zoom, showGrid, setZoom, toggleGrid, cards, deselectAll, slides, mindMapMode, setMindMapMode } = useCanvasStore()
 
   const handleZoomIn = () => setZoom(zoom + 0.1)
   const handleZoomOut = () => setZoom(zoom - 0.1)
@@ -78,6 +78,18 @@ export default function CanvasToolbar() {
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 5h16M4 14h16" />
+          </svg>
+        </button>
+
+        <div className="toolbar-divider" />
+
+        <button
+          onClick={() => setMindMapMode(!mindMapMode)}
+          className={`toolbar-btn ${mindMapMode ? 'active' : ''}`}
+          title="思维导图模式"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
           </svg>
         </button>
 
