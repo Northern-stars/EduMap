@@ -544,11 +544,6 @@ export default function InfiniteCanvas() {
         ))}
       </div>
 
-      {/* Zoom indicator */}
-      <div className="zoom-indicator">
-        {Math.round(zoom * 100)}%
-      </div>
-
       {/* MindMap Floating Toolbar */}
       <MindMapFloatingToolbar
         isConnecting={isMindMapConnecting}
