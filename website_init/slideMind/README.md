@@ -1,178 +1,178 @@
-# SlideMind — 概念关联思维导图
+# SlideMind — Concept-Linked Mind Map
 
-一款基于 AI 的概念关联思维导图工具，让用户通过上传资料、选择概念、拖拽关联来**主动构建自己的知识网络**。
+An AI-powered concept-linking mind mapping tool that allows users to **proactively build their own knowledge networks** by uploading materials, selecting concepts, and dragging to create connections.
 
-> 设计理念：改变单一向大语言模型问问题的模式，转变为自己组织笔记格式、自己寻找关联的框架。
-
----
-
-## ✨ 核心功能
-
-- 📤 **智能上传** — 支持 PPTX、PDF、图片格式
-- 🤖 **AI 摘要** — 自动提取关键概念
-- 🧠 **概念卡片** — 可视化管理知识节点
-- 🔗 **概念连线** — 按住 Shift 连接相关概念
-- 💬 **AI 对话** — 感知选中概念，智能辅助
+> Design Philosophy: Shift away from the pattern of simply asking large language models questions, towards organizing your own note format and finding your own connection frameworks.
 
 ---
 
-## 🎯 使用流程
+## ✨ Core Features
+
+- 📤 **Smart Upload** — Supports PPTX, PDF, and image formats
+- 🤖 **AI Summary** — Automatically extracts key concepts
+- 🧠 **Concept Cards** — Visual management of knowledge nodes
+- 🔗 **Concept Linking** — Hold Shift to connect related concepts
+- 💬 **AI Chat** — Aware of selected concepts, intelligent assistance
+
+---
+
+## 🎯 How It Works
 
 ```
-Step 1: 上传 Slide（PPTX/PDF/图片）
+Step 1: Upload Slides (PPTX/PDF/Images)
    ↓
-Step 2: 阅读 AI 生成的摘要
+Step 2: Read AI-generated summaries
    ↓
-Step 3: 手动点击概念添加（或一键添加全部）
+Step 3: Click to add concepts manually (or add all at once)
    ↓
-Step 4: 画布上拖拽连接，构建思维导图
+Step 4: Drag and connect on the canvas to build your mind map
 ```
 
 ---
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 1. 安装依赖
+### 1. Install Dependencies
 
 ```bash
-# 前端
+# Frontend
 cd client
 npm install
 
-# 后端
+# Backend
 cd ../server
 npm install
 ```
 
-### 2. 配置 API Key
+### 2. Configure API Key
 
 ```bash
-# 编辑 server/.env
-MINIMAX_API_KEY=你的MiniMax_API_Key
+# Edit server/.env
+MINIMAX_API_KEY=your_MiniMax_API_Key
 ```
 
-获取 API Key：https://www.minimax.chat/
+Get your API Key: https://www.minimax.chat/
 
-### 3. 启动服务
+### 3. Start Services
 
 ```bash
-# 终端 1: 后端
+# Terminal 1: Backend
 cd server && npm run dev
 
-# 终端 2: 前端
+# Terminal 2: Frontend
 cd client && npm run dev
 ```
 
-### 4. 访问
+### 4. Access
 
-打开浏览器：**http://localhost:3000**
-
----
-
-## ⌨️ 快捷操作
-
-| 操作 | 快捷键 |
-|------|--------|
-| 连接概念 | Shift + 点击两个卡片 |
-| 平移画布 | Space + 鼠标拖动 |
-| 多选卡片 | Cmd/Ctrl + 点击 |
-| 删除选中 | Delete |
+Open your browser: **http://localhost:3000**
 
 ---
 
-## 🛠 技术栈
+## ⌨️ Keyboard Shortcuts
 
-| 层级 | 技术 |
-|------|------|
-| 前端 | Next.js 14 + React 18 + TypeScript |
-| 样式 | Tailwind CSS（Lovart AI 风格） |
-| 状态管理 | Zustand |
-| 后端 | Express.js |
+| Action | Shortcut |
+|--------|----------|
+| Link concepts | Shift + Click two cards |
+| Pan canvas | Space + Mouse drag |
+| Multi-select cards | Cmd/Ctrl + Click |
+| Delete selected | Delete |
+
+---
+
+## 🛠 Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | Next.js 14 + React 18 + TypeScript |
+| Styling | Tailwind CSS (Lovart AI style) |
+| State Management | Zustand |
+| Backend | Express.js |
 | AI | MiniMax API (MiniMax-M2) |
-| 文件解析 | JSZip (PPTX), pdf-parse (PDF) |
+| File Parsing | JSZip (PPTX), pdf-parse (PDF) |
 
 ---
 
-## 📁 项目结构
+## 📁 Project Structure
 
 ```
 slideMind/
-├── client/                    # Next.js 前端
-│   ├── app/                  # 页面组件
-│   ├── components/          # UI 组件
-│   │   ├── Canvas/          # 画布相关
-│   │   ├── Chat/            # 对话面板
-│   │   └── Slides/           # 上传相关
-│   └── lib/                 # 状态管理
+├── client/                    # Next.js frontend
+│   ├── app/                  # Page components
+│   ├── components/          # UI components
+│   │   ├── Canvas/          # Canvas-related
+│   │   ├── Chat/            # Chat panel
+│   │   └── Slides/           # Upload-related
+│   └── lib/                 # State management
 │
-├── server/                    # Express 后端
-│   ├── routes/               # API 路由
-│   │   ├── slides.js        # 文件上传解析
-│   │   ├── concepts.js      # 概念卡片 CRUD
-│   │   └── chat.js          # AI 对话
+├── server/                    # Express backend
+│   ├── routes/               # API routes
+│   │   ├── slides.js        # File upload & parsing
+│   │   ├── concepts.js      # Concept card CRUD
+│   │   └── chat.js          # AI chat
 │   └── services/
 │       ├── minimax.js        # MiniMax API
-│       └── slide-parser.js   # PPTX/PDF 解析
+│       └── slide-parser.js   # PPTX/PDF parsing
 │
-├── SPEC.md                    # 详细设计规范
-└── README.md                  # 本文档
+├── SPEC.md                    # Detailed design specification
+└── README.md                  # This file
 ```
 
 ---
 
-## 🔧 常见问题
+## 🔧 FAQ
 
-### Q: 上传后没有生成摘要？
+### Q: No summary generated after upload?
 
-1. 检查服务器是否运行：
+1. Check if the server is running:
    ```bash
    curl http://localhost:3001/api/health
    ```
-2. 检查 `.env` 中 API Key 是否配置
-3. 查看服务器日志
+2. Check if API Key is configured in `.env`
+3. Check server logs
 
-### Q: AI 返回 demo 内容？
+### Q: AI returns demo content?
 
-确保 `.env` 中 API Key 正确且服务器已重启
+Make sure the API Key in `.env` is correct and the server has been restarted
 
-### Q: 画布无法拖动？
+### Q: Canvas won't drag?
 
-尝试刷新页面，或检查是否按住了 Space 键
+Try refreshing the page, or check if Space key is being held down
 
 ---
 
-## 📦 部署说明
+## 📦 Deployment
 
-### 前端构建
+### Frontend Build
 ```bash
 cd client
-npm run build  # 输出在 .next/
+npm run build  # Output in .next/
 ```
 
-### 后端部署
-- 需要 Node.js 18+
-- 使用 PM2 管理进程
-- 生产环境建议配置 HTTPS
+### Backend Deployment
+- Requires Node.js 18+
+- Use PM2 to manage processes
+- HTTPS recommended for production
 
-### 生产环境建议
-- 使用 PostgreSQL/MySQL 替代内存存储
-- 考虑添加用户认证
-- 考虑引入向量数据库实现 RAG
-
----
-
-## 🔐 安全注意
-
-- `.env` 文件不要提交到 Git
-- API Key 只在服务器端使用
-- 考虑添加文件上传大小限制
+### Production Recommendations
+- Use PostgreSQL/MySQL instead of in-memory storage
+- Consider adding user authentication
+- Consider adding a vector database for RAG
 
 ---
 
-## 📄 许可证
+## 🔐 Security Notes
+
+- Do not commit `.env` to Git
+- API Key is server-side only
+- Consider adding file upload size limits
+
+---
+
+## 📄 License
 
 MIT License
 
 ---
 
-*最后更新：2026-03-28*
+*Last updated: 2026-03-28*
