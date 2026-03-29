@@ -64,7 +64,7 @@ def parse_pptx(file_path, slide_id, filename):
     try:
         if api:
             # Use API to analyze PPTX with OCR
-            analysis = api.analyze_pptx_with_ocr(file_path, prompt="请总结这个PPT的内容，提取关键概念")
+            analysis = api.analyze_pptx_with_ocr(file_path, prompt="Summarize this PPT content and extract key concepts")
 
             result['content'] = analysis.get('full_text', '')
             result['summary'] = analysis.get('summary', '')
@@ -109,7 +109,7 @@ def parse_pdf(file_path, slide_id, filename):
     try:
         if api:
             # Use API to analyze PDF with OCR
-            analysis = api.analyze_pdf_with_ocr(file_path, prompt="请总结这个PDF的内容，提取关键概念")
+            analysis = api.analyze_pdf_with_ocr(file_path, prompt="Summarize this PDF content and extract key concepts")
 
             result['content'] = analysis.get('full_text', '')
             result['summary'] = analysis.get('summary', '')
@@ -153,7 +153,7 @@ def parse_image(file_path, slide_id, filename):
     try:
         if api:
             # Use API to extract OCR text and summarize with LLM
-            analysis = api.analyze_image_with_llm(file_path, prompt="请总结这张图片的内容，提取关键概念")
+            analysis = api.analyze_image_with_llm(file_path, prompt="Summarize this image content and extract key concepts")
 
             result['content'] = analysis.get('full_text', '')
             result['summary'] = analysis.get('summary', '')

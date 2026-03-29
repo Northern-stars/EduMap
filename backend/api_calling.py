@@ -304,7 +304,7 @@ class api_access:
             content = f.read()
 
         messages = [
-            {"role": "user", "content": "Read through this file and summarize it within 300 words:\n\n" + content}
+            {"role": "user", "content": "Read through this file and summarize it within 200 words:\n\n" + content}
         ]
         return self._call_minimax(messages, max_tokens=1000)
 
@@ -435,7 +435,7 @@ class api_access:
             "response": response
         }
 
-    def analyze_image_with_llm(self, image_path, prompt="请总结这张图片的内容，提取关键概念"):
+    def analyze_image_with_llm(self, image_path, prompt="Summarize this image and extract key concepts"):
         """Analyze image by extracting text via OCR, then summarize with LLM
 
         Args:
@@ -453,12 +453,12 @@ class api_access:
             return {
                 "ocr_text": "",
                 "full_text": "",
-                "summary": "图片中未提取到文字内容"
+                "summary": "No text content extracted from image"
             }
 
         # Send OCR text to MiniMax for summary
         messages = [
-            {"role": "user", "content": f"{prompt}\n\n图片文字内容:\n{ocr_text}"}
+            {"role": "user", "content": f"{prompt}\n\nImage text content:\n{ocr_text}"}
         ]
         summary = self._call_minimax(messages, max_tokens=4096)
 
@@ -546,7 +546,7 @@ class api_access:
         """
         print(f"Explaining term: {term}")
 
-        prompt = f"用一句话简要解释以下概念：{term}"
+        prompt = f"Briefly explain this concept in one sentence: {term}"
 
         messages = [
             {"role": "user", "content": prompt}

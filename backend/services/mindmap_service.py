@@ -134,17 +134,17 @@ def concept_associate(text, max_iter=2, max_word=3, base_position=None, nodeId=N
     layer_spacing_y = 120
 
     def extract_keywords(text, max_word):
-        """使用 LLM 提取关键词，返回 [(keyword, brief_explanation), ...]"""
-        prompt = f"""从以下文本中提取关键概念，每个概念用 "概念名::简短解释" 格式返回，最多返回 {max_word} 个概念。
+        """Extract keywords using LLM, returns [(keyword, brief_explanation), ...]"""
+        prompt = f"""Extract key concepts from the following text. Return each concept in "concept_name::brief_explanation" format, up to {max_word} concepts.
 
-要求：
-1. 只返回概念列表，每行一个，格式为：概念名::解释
-2. 概念名要简洁，2-6个字
-3. 解释要简短，20字以内
-4. 只返回真正重要的概念，不要泛泛的词
-5. 如果没有明显概念，返回空行
+Requirements:
+1. Return only the concept list, one per line, format: concept_name::explanation
+2. Keep concept names concise, 2-6 characters
+3. Keep explanations brief, within 20 characters
+4. Return only truly important concepts, avoid generic terms
+5. If no obvious concepts, return empty
 
-文本：
+Text:
 {text[:1000]}"""
 
         try:
