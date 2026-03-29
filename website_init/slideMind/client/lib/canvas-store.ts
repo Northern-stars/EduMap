@@ -82,6 +82,10 @@ interface CanvasState {
   panOffset: { x: number; y: number }
   showGrid: boolean
 
+  // Chat panel
+  chatPanelVisible: boolean
+  setChatPanelVisible: (visible: boolean) => void
+
   // Slides
   slides: Slide[]
   activeSlideId: string | null
@@ -150,6 +154,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   zoom: 1,
   panOffset: { x: 0, y: 0 },
   showGrid: true,
+  chatPanelVisible: true,
   slides: [],
   activeSlideId: null,
   lastAiMessage: null,
@@ -271,6 +276,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   toggleGrid: () => {
     set((state) => ({ showGrid: !state.showGrid }))
   },
+
+  setChatPanelVisible: (visible) => set({ chatPanelVisible: visible }),
 
   addSlide: (slide) => {
     set((state) => ({

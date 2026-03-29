@@ -9,10 +9,20 @@ import ConceptImporter from '@/components/Slides/ConceptImporter'
 import MindMapToolbar from '@/components/Canvas/MindMapToolbar'
 import { useCanvasStore } from '@/lib/canvas-store'
 
-export default function Home() {
+interface HomeProps {
+  showChatPanel?: boolean
+  onToggleChatPanel?: () => void
+}
+
+export default function Home({ showChatPanel = true, onToggleChatPanel }: HomeProps) {
   const [showUploader, setShowUploader] = useState(false)
   const [showImporter, setShowImporter] = useState(false)
-  const { slides, mindMapData } = useCanvasStore()
+  const { slides, mindMapData, chatPanelVisible, setChatPanelVisible } = useCanvasStore()
+
+  const handleToggleChatPanel = () => {
+    setChatPanelVisible(!chatPanelVisible)
+    onToggleChatPanel?.()
+  }
 
   return (
     <div className="app-root">
@@ -66,8 +76,30 @@ export default function Home() {
           </div>
         )}
 
-        {/* Chat Panel */}
-        <ChatPanel />
+        {/* Toggle Chat Panel Button */}
+        <button
+          onClick={handleToggleChatPanel}
+          className="absolute top-1/2 -translate-y-1/2 z-50 w-8 h-16 bg-[var(--surface)] border border-[var(--border)] rounded-l-lg shadow-md flex items-center justify-center hover:bg-[var(--bg-secondary)] transition-all duration-300 ease-in-out"
+          style={{ right: chatPanelVisible ? '368px' : '4px' }}
+          title={chatPanelVisible ? '隐藏聊天面板' : '显示聊天面板'}
+        >
+          <svg
+            className={`w-4 h-4 text-[var(--text-secondary)] transition-transform duration-300 ${chatPanelVisible ? 'rotate-0' : 'rotate-180'}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        {/* Chat Panel Container */}
+        <div className={`relative h-full ml-auto transition-all duration-300 ease-in-out ${chatPanelVisible ? 'w-[360px]' : 'w-0'}`}>
+          {/* Chat Panel */}
+          <div className={`transition-all duration-300 ease-in-out h-full ${chatPanelVisible ? 'opacity-100' : 'opacity-0 overflow-hidden'}`}>
+            {chatPanelVisible && <ChatPanel />}
+          </div>
+        </div>
       </div>
 
       {/* Upload Modal */}

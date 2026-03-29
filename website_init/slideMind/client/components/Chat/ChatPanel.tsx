@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useCanvasStore, Concept, ChatMessage } from '@/lib/canvas-store'
+import { useCanvasStore, Concept, ChatMessage, MindMapNode } from '@/lib/canvas-store'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -13,7 +13,7 @@ interface Message {
 }
 
 export default function ChatPanel() {
-  const { slides, activeSlideId, addMindMapNode, selectedMindMapNodeId, mindMapData, lastAiMessage, setLastAiMessage } = useCanvasStore()
+  const { slides, activeSlideId, addMindMapNode, selectedMindMapNodeId, mindMapData, lastAiMessage, setLastAiMessage, setMindMapData } = useCanvasStore()
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -103,6 +103,31 @@ export default function ChatPanel() {
     addMindMapNode(mindMapNode)
   }
 
+  const handleAddToCanvas = (content: string) => {
+    // Ensure mindMapData exists
+    if (!mindMapData) {
+      const defaultData = {
+        id: `mindmap-${Date.now()}`,
+        title: '新建思维导图',
+        nodes: [] as MindMapNode[],
+        edges: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      setMindMapData(defaultData)
+    }
+
+    const newNode: MindMapNode = {
+      id: `node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      text: content,
+      position: {
+        x: 200 + Math.random() * 400,
+        y: 200 + Math.random() * 200,
+      },
+    }
+    addMindMapNode(newNode)
+  }
+
   return (
     <div className="chat-panel">
       {/* Header */}
@@ -182,7 +207,20 @@ export default function ChatPanel() {
               {msg.role === 'user' ? (
                 msg.content
               ) : (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                <>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                  {msg.content && (
+                    <button
+                      onClick={() => handleAddToCanvas(msg.content)}
+                      className="mt-3 flex items-center gap-2 px-3 py-2 text-xs bg-[var(--primary-light)] hover:bg-[var(--primary)] hover:text-white text-[var(--primary)] rounded-lg transition-all duration-200"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      添加到画布
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
