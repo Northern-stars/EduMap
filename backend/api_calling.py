@@ -296,7 +296,7 @@ class api_access:
             content = f.read()
 
         messages = [
-            {"role": "user", "content": "Read through this file and summarize it:\n\n" + content}
+            {"role": "user", "content": "Read through this file and summarize it within 300 words:\n\n" + content}
         ]
         return self._call_minimax(messages, max_tokens=1000)
 
