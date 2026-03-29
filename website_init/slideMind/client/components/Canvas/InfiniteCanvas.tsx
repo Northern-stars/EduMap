@@ -303,34 +303,51 @@ export default function InfiniteCanvas() {
 
   // Explain selected term - creates a new node with explanation
   const handleExplain = async () => {
-    if (!selectedTerm || !selectedTermNodeId || !mindMapData) return
+    const { mindMapData: currentMindMap, selectedTerm: currentTerm, selectedTermNodeId: currentNodeId, addMindMapNode, addMindMapEdge, setSelectedTerm } = useCanvasStore.getState()
 
-    const sourceNode = mindMapData.nodes.find((n) => n.id === selectedTermNodeId)
-    if (!sourceNode) return
+    if (!currentTerm || !currentNodeId || !currentMindMap) {
+      console.log('[解释] 早期返回: term=', currentTerm, 'nodeId=', currentNodeId, 'mindMapData=', !!currentMindMap)
+      return
+    }
+
+    const sourceNode = currentMindMap.nodes.find((n) => n.id === currentNodeId)
+    if (!sourceNode) {
+      console.log('[解释] 未找到源节点: nodeId=', currentNodeId)
+      return
+    }
 
     try {
       const res = await fetch('http://localhost:3001/api/chat/explain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ term: selectedTerm }),
+        body: JSON.stringify({ term: currentTerm }),
       })
       const data = await res.json()
 
       if (data.explanation) {
+        // Re-check state after async operation
+        const { mindMapData: freshMindMap } = useCanvasStore.getState()
+        if (!freshMindMap) {
+          console.log('[解释] 异步操作后mindMapData为空')
+          return
+        }
+
         // Create new node with explanation
         const newNodeId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
         const newNode: MindMapNode = {
           id: newNodeId,
-          text: `**${selectedTerm}**\n\n${data.explanation}`,
+          text: `**${currentTerm}**\n\n${data.explanation}`,
           position: {
             x: sourceNode.position.x + 220,
             y: sourceNode.position.y + Math.random() * 100 - 50,
           },
         }
+        console.log('[解释] 添加节点:', newNodeId, '从', sourceNode.id)
         addMindMapNode(newNode)
 
         // Add edge from source node to new node
         const edgeId = `edge-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+        console.log('[解释] 添加边:', edgeId, '从', sourceNode.id, '到', newNodeId)
         addMindMapEdge({
           id: edgeId,
           from: sourceNode.id,
@@ -343,12 +360,14 @@ export default function InfiniteCanvas() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             role: 'assistant',
-            content: `用户选中了"${selectedTerm}"，以下是解释：\n\n${data.explanation}`,
+            content: `用户选中了"${currentTerm}"，以下是解释：\n\n${data.explanation}`,
           }),
         })
 
         // Clear selection
         setSelectedTerm(null, null)
+      } else {
+        console.log('[解释] API返回无explanation:', data)
       }
     } catch (error) {
       console.error('Failed to explain term:', error)

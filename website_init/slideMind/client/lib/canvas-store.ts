@@ -311,7 +311,11 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
   addMindMapNode: (node) => {
     const { mindMapData } = get()
-    if (!mindMapData) return
+    if (!mindMapData) {
+      console.log('[addMindMapNode] mindMapData is null')
+      return
+    }
+    console.log('[addMindMapNode] 添加节点:', node.id)
     set({
       mindMapData: {
         ...mindMapData,
@@ -347,12 +351,19 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
   addMindMapEdge: (edge) => {
     const { mindMapData } = get()
-    if (!mindMapData) return
+    if (!mindMapData) {
+      console.log('[addMindMapEdge] mindMapData is null')
+      return
+    }
     // Prevent duplicate edges
     const exists = (mindMapData.edges || []).some(
       (e) => e.from === edge.from && e.to === edge.to
     )
-    if (exists) return
+    if (exists) {
+      console.log('[addMindMapEdge] 边已存在，跳过:', edge)
+      return
+    }
+    console.log('[addMindMapEdge] 添加边:', edge.id, '从', edge.from, '到', edge.to)
     set({
       mindMapData: {
         ...mindMapData,
